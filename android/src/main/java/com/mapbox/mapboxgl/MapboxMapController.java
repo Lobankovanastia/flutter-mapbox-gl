@@ -23,8 +23,6 @@ import androidx.annotation.NonNull;
 import android.util.Log;
 import android.view.View;
 
-import androidx.annotation.NonNull;
-
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
 import com.mapbox.android.core.location.LocationEngineProvider;
@@ -402,6 +400,21 @@ final class MapboxMapController
           moveCamera(cameraUpdate);
         }
         result.success(null);
+        break;
+      }
+      case "camera#viewport": {
+        int viewportWidth = mapView.getWidth();
+        int viewportHeight = mapView.getHeight();
+        LatLng topLeft = mapboxMap.getProjection().fromScreenLocation(new PointF(0, 0));
+        //LatLng topRight = mapboxMap.getProjection().fromScreenLocation(new PointF(viewportWidth, 0));
+        LatLng bottomRight = mapboxMap.getProjection().fromScreenLocation(new PointF(viewportWidth, viewportHeight));
+        //LatLng bottomLeft = mapboxMap.getProjection().fromScreenLocation(new PointF(0, viewportHeight));
+        Map<String, Double> viewport = new HashMap<>();
+        viewport.put("top", topLeft.getLatitude());
+        viewport.put("left", topLeft.getLongitude());
+        viewport.put("bottom", bottomRight.getLatitude());
+        viewport.put("right", bottomRight.getLongitude());
+        result.success(viewport);
         break;
       }
       case "camera#animate": {

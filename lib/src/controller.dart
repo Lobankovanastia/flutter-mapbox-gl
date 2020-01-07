@@ -252,6 +252,14 @@ class MapboxMapController extends ChangeNotifier {
     return symbol;
   }
 
+  
+  Future<Map<String, double>> getViewport() async {
+    var data = await _channel.invokeMethod('camera#viewport');
+  
+    return (data as Map<dynamic, dynamic>).map((k, v) => MapEntry(k.toString(), double.parse(v.toString())));
+  }
+
+
   /// Updates the specified [symbol] with the given [changes]. The symbol must
   /// be a current member of the [symbols] set.
   ///

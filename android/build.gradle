@@ -5,6 +5,7 @@ buildscript {
     repositories {
         google()
         jcenter()
+        mavenCentral()
     }
 
     dependencies {
@@ -39,6 +40,9 @@ android {
     dependencies {
         implementation "com.mapbox.mapboxsdk:mapbox-android-sdk:8.5.0"
         implementation "com.mapbox.mapboxsdk:mapbox-android-plugin-annotation-v8:0.7.0"
+        implementation "androidx.annotation:annotation:1.1.0"
+        // To use the Java-compatible @Experimental API annotation
+        implementation "androidx.annotation:annotation-experimental:1.0.0"
     }
     compileOptions {
         sourceCompatibility 1.8
