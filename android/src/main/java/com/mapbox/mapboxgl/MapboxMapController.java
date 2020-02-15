@@ -337,11 +337,11 @@ final class MapboxMapController
   private void enableLocationComponent(@NonNull Style style) {
     if (hasLocationPermission()) {
       locationEngine = LocationEngineProvider.getBestLocationEngine(context);
-      LocationComponentOptions locationComponentOptions = LocationComponentOptions.builder(context)
-        .trackingGesturesManagement(true)
+      LocationComponentActivationOptions locationComponentOptions = LocationComponentActivationOptions.builder(context, style)
+        //.trackingGesturesManagement(true)
         .build();
       locationComponent = mapboxMap.getLocationComponent();
-      locationComponent.activateLocationComponent(context, style, locationComponentOptions);
+      locationComponent.activateLocationComponent(locationComponentOptions);
       locationComponent.setLocationComponentEnabled(true);
       // locationComponent.setRenderMode(RenderMode.COMPASS); // remove or keep default?
       locationComponent.setLocationEngine(locationEngine);
