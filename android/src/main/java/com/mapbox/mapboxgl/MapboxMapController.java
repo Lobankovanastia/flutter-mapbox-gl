@@ -24,6 +24,8 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 
+import androidx.annotation.NonNull;
+
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
 import com.mapbox.android.core.location.LocationEngineProvider;
@@ -337,11 +339,11 @@ final class MapboxMapController
   private void enableLocationComponent(@NonNull Style style) {
     if (hasLocationPermission()) {
       locationEngine = LocationEngineProvider.getBestLocationEngine(context);
-      LocationComponentActivationOptions locationComponentOptions = LocationComponentActivationOptions.builder(context, style)
-        //.trackingGesturesManagement(true)
+      LocationComponentOptions locationComponentOptions = LocationComponentOptions.builder(context)
+        .trackingGesturesManagement(true)
         .build();
       locationComponent = mapboxMap.getLocationComponent();
-      locationComponent.activateLocationComponent(locationComponentOptions);
+      locationComponent.activateLocationComponent(context, style, locationComponentOptions);
       locationComponent.setLocationComponentEnabled(true);
       // locationComponent.setRenderMode(RenderMode.COMPASS); // remove or keep default?
       locationComponent.setLocationEngine(locationEngine);
@@ -455,41 +457,30 @@ final class MapboxMapController
         }
         break;
       }
-      case "camera#viewport": {
-        int viewportWidth = mapView.getWidth();
-        int viewportHeight = mapView.getHeight();
-        LatLng topLeft = mapboxMap.getProjection().fromScreenLocation(new PointF(0, 0));
-        //LatLng topRight = mapboxMap.getProjection().fromScreenLocation(new PointF(viewportWidth, 0));
-        LatLng bottomRight = mapboxMap.getProjection().fromScreenLocation(new PointF(viewportWidth, viewportHeight));
-        //LatLng bottomLeft = mapboxMap.getProjection().fromScreenLocation(new PointF(0, viewportHeight));
-        Map<String, Double> viewport = new HashMap<>();
-        viewport.put("top", topLeft.getLatitude());
-        viewport.put("left", topLeft.getLongitude());
-        viewport.put("bottom", bottomRight.getLatitude());
-        viewport.put("right", bottomRight.getLongitude());
-        result.success(viewport);
-        break;
-      }
       case "camera#animate": {
         final CameraUpdate cameraUpdate = Convert.toCameraUpdate(call.argument("cameraUpdate"), mapboxMap, density);
-        if (cameraUpdate != null) {
+        final Integer duration = call.argument("duration");
+
+        final OnCameraMoveFinishedListener onCameraMoveFinishedListener = new OnCameraMoveFinishedListener(){
+          @Override
+          public void onFinish() {
+            super.onFinish();
+            result.success(true);
+          }
+
+          @Override
+          public void onCancel() {
+            super.onCancel();
+            result.success(false);
+          }
+        };
+        if (cameraUpdate != null && duration != null) {
           // camera transformation not handled yet
-          mapboxMap.animateCamera(cameraUpdate, new OnCameraMoveFinishedListener(){
-            @Override
-            public void onFinish() {
-              super.onFinish();
-              result.success(true);
-            }
-
-            @Override
-            public void onCancel() {
-              super.onCancel();
-              result.success(false);
-            }
-          });
-
-          // animateCamera(cameraUpdate);
-        }else {
+          mapboxMap.animateCamera(cameraUpdate, duration, onCameraMoveFinishedListener);
+        } else if (cameraUpdate != null) {
+          // camera transformation not handled yet
+          mapboxMap.animateCamera(cameraUpdate, onCameraMoveFinishedListener);
+        } else {
           result.success(false);
         }
         break;
