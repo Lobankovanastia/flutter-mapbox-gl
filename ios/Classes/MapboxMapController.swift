@@ -3,15 +3,32 @@ import UIKit
 import Mapbox
 import MapboxAnnotationExtension
 
+extension UIImage {
+func resizeImage(targetSize: CGSize) -> UIImage {
+  let size = self.size
+  let widthRatio  = targetSize.width  / size.width
+  let heightRatio = targetSize.height / size.height
+  let newSize = widthRatio > heightRatio ?  CGSize(width: size.width * heightRatio, height: size.height * heightRatio) : CGSize(width: size.width * widthRatio,  height: size.height * widthRatio)
+  let rect = CGRect(x: 0, y: 0, width: newSize.width, height: newSize.height)
+
+  UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+  self.draw(in: rect)
+  let newImage = UIGraphicsGetImageFromCurrentImageContext()
+  UIGraphicsEndImageContext()
+
+  return newImage!
+}
+}
+
 class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, MapboxMapOptionsSink, MGLAnnotationControllerDelegate {
-    
+
     private var registrar: FlutterPluginRegistrar
     private var channel: FlutterMethodChannel?
-    
+
     private var mapView: MGLMapView
     private var isMapReady = false
     private var mapReadyResult: FlutterResult?
-    
+
     private var initialTilt: CGFloat?
     private var cameraTargetBounds: MGLCoordinateBounds?
     private var trackCameraPosition = false
@@ -24,25 +41,25 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
     func view() -> UIView {
         return mapView
     }
-    
+
     init(withFrame frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?, registrar: FlutterPluginRegistrar) {
         mapView = MGLMapView(frame: frame)
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.registrar = registrar
-        
+
         super.init()
-        
+
         channel = FlutterMethodChannel(name: "plugins.flutter.io/mapbox_maps_\(viewId)", binaryMessenger: registrar.messenger())
         channel!.setMethodCallHandler(onMethodCall)
-        
+
         mapView.delegate = self
-        
+
         let singleTap = UITapGestureRecognizer(target: self, action: #selector(handleMapTap(sender:)))
         for recognizer in mapView.gestureRecognizers! where recognizer is UITapGestureRecognizer {
             singleTap.require(toFail: recognizer)
         }
         mapView.addGestureRecognizer(singleTap)
-        
+
         if let args = args as? [String: Any] {
             Convert.interpretMapboxMapOptions(options: args["options"], delegate: self)
             if let initialCameraPosition = args["initialCameraPosition"] as? [String: Any],
@@ -53,7 +70,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             }
         }
     }
-    
+
     func onMethodCall(methodCall: FlutterMethodCall, result: @escaping FlutterResult) {
         switch(methodCall.method) {
         case "map#waitForMap":
@@ -138,7 +155,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             guard let cameraUpdate = arguments["cameraUpdate"] as? [Any] else { return }
             if let camera = Convert.parseCameraUpdate(cameraUpdate: cameraUpdate, mapView: mapView) {
                 if let duration = arguments["duration"] as? TimeInterval {
-                    mapView.setCamera(camera, withDuration: TimeInterval(duration / 1000), 
+                    mapView.setCamera(camera, withDuration: TimeInterval(duration / 1000),
                         animationTimingFunction: CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut))
                     result(nil)
                 }
@@ -148,7 +165,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
         case "symbol#add":
             guard let symbolAnnotationController = symbolAnnotationController else { return }
             guard let arguments = methodCall.arguments as? [String: Any] else { return }
-            
+
             // Parse geometry
             if let options = arguments["options"] as? [String: Any],
                 let geometry = options["geometry"] as? [Double] {
@@ -160,8 +177,18 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
                 if let iconImage = options["iconImage"] as? String {
                     addIconImageToMap(iconImageName: iconImage)
                 }
-                symbolAnnotationController.addStyleAnnotation(symbol)
+                //symbolAnnotationController.addStyleAnnotation(symbol)
+                var point: MGLPointAnnotation
+                point = MGLPointAnnotation()
+                point.coordinate = coordinate
+                point.title = "xxxxx";
+                point.subtitle = "..."
+
+                self.mapView.addAnnotation(point)
+
                 result(symbol.identifier)
+                //mapView.
+
             } else {
                 result(nil)
             }
@@ -214,7 +241,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             guard let circleAnnotationController = circleAnnotationController else { return }
             guard let arguments = methodCall.arguments as? [String: Any] else { return }
             guard let circleId = arguments["circle"] as? String else { return }
-            
+
             for circle in circleAnnotationController.styleAnnotations() {
                 if circle.identifier == circleId {
                     Convert.interpretCircleOptions(options: arguments["options"], delegate: circle as! MGLCircleStyleAnnotation)
@@ -227,7 +254,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             guard let circleAnnotationController = circleAnnotationController else { return }
             guard let arguments = methodCall.arguments as? [String: Any] else { return }
             guard let circleId = arguments["circle"] as? String else { return }
-            
+
             for circle in circleAnnotationController.styleAnnotations() {
                 if circle.identifier == circleId {
                     circleAnnotationController.removeStyleAnnotation(circle)
@@ -257,7 +284,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             guard let lineAnnotationController = lineAnnotationController else { return }
             guard let arguments = methodCall.arguments as? [String: Any] else { return }
             guard let lineId = arguments["line"] as? String else { return }
-            
+
             for line in lineAnnotationController.styleAnnotations() {
                 if line.identifier == lineId {
                     Convert.interpretLineOptions(options: arguments["options"], delegate: line as! MGLLineStyleAnnotation)
@@ -270,7 +297,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             guard let lineAnnotationController = lineAnnotationController else { return }
             guard let arguments = methodCall.arguments as? [String: Any] else { return }
             guard let lineId = arguments["line"] as? String else { return }
-            
+
             for line in lineAnnotationController.styleAnnotations() {
                 if line.identifier == lineId {
                     lineAnnotationController.removeStyleAnnotation(line)
@@ -282,7 +309,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             result(FlutterMethodNotImplemented)
         }
     }
-    
+
     private func addIconImageToMap(iconImageName: String) {
         // Check if the image has already been added to the map.
         if self.mapView.style?.image(forName: iconImageName) == nil {
@@ -303,12 +330,12 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
     private func updateMyLocationEnabled() {
         mapView.showsUserLocation = self.myLocationEnabled
     }
-    
+
     private func getCamera() -> MGLMapCamera? {
         return trackCameraPosition ? mapView.camera : nil
-        
+
     }
-    
+
     /*
     *  UITapGestureRecognizer
     *  On tap invoke the map#onMapClick callback.
@@ -324,7 +351,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
                       "lat": coordinate.latitude,
                   ])
     }
-    
+
     /*
      *  MGLAnnotationControllerDelegate
      */
@@ -332,7 +359,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
         guard let channel = channel else {
             return
         }
-        
+
         if let symbol = styleAnnotation as? MGLSymbolStyleAnnotation {
             channel.invokeMethod("symbol#onTap", arguments: ["symbol" : "\(symbol.identifier)"])
         } else if let circle = styleAnnotation as? MGLCircleStyleAnnotation {
@@ -341,22 +368,39 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             channel.invokeMethod("line#onTap", arguments: ["line" : "\(line.identifier)"])
         }
     }
-    
+
     // This is required in order to hide the default Maps SDK pin
-    func mapView(_ mapView: MGLMapView, viewFor annotation: MGLAnnotation) -> MGLAnnotationView? {
+    /*func mapView(_ mapView: MGLMapView, viewFor annotation: MGLAnnotation) -> MGLAnnotationView? {
         if annotation is MGLUserLocation {
             return nil
         }
-        return MGLAnnotationView(frame: CGRect(x: 0, y: 0, width: 10, height: 10))
-    }
-    
+        //return MGLAnnotationView(frame: CGRect(x: 0, y: 0, width: 10, height: 10))
+
+        let reuseIdentifier = "\(annotation.coordinate.longitude)"
+
+        // For better performance, always try to reuse existing annotations.
+        var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: reuseIdentifier)
+
+        // If there’s no reusable annotation view available, initialize a new one.
+        if annotationView == nil {
+        annotationView = MGLAnnotationView(reuseIdentifier: reuseIdentifier)
+        annotationView!.bounds = CGRect(x: 0, y: 0, width: 40, height: 40)
+
+        // Set the annotation view’s background color to a value determined by its longitude.
+        let hue = CGFloat(annotation.coordinate.longitude) / 100
+            annotationView!.backgroundColor = UIColor(hue: hue, saturation: CGFloat(annotation.coordinate.latitude/100), brightness: 1, alpha: 1)
+        }
+
+        return annotationView
+    }*/
+
     /*
      *  MGLMapViewDelegate
      */
     func mapView(_ mapView: MGLMapView, didFinishLoading style: MGLStyle) {
         isMapReady = true
         updateMyLocationEnabled()
-        
+
         if let initialTilt = initialTilt {
             let camera = mapView.camera
             camera.pitch = initialTilt
@@ -370,7 +414,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
         symbolAnnotationController = MGLSymbolAnnotationController(mapView: self.mapView)
         symbolAnnotationController!.annotationsInteractionEnabled = true
         symbolAnnotationController?.delegate = self
-        
+
         circleAnnotationController = MGLCircleAnnotationController(mapView: self.mapView)
         circleAnnotationController!.annotationsInteractionEnabled = true
         circleAnnotationController?.delegate = self
@@ -380,37 +424,38 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             channel.invokeMethod("map#onStyleLoaded", arguments: nil)
         }
     }
-    
+
     func mapView(_ mapView: MGLMapView, shouldChangeFrom oldCamera: MGLMapCamera, to newCamera: MGLMapCamera) -> Bool {
         guard let bbox = cameraTargetBounds else { return true }
-                
+
         // Get the current camera to restore it after.
         let currentCamera = mapView.camera
-        
+
         // From the new camera obtain the center to test if it’s inside the boundaries.
         let newCameraCenter = newCamera.centerCoordinate
-        
+
         // Set the map’s visible bounds to newCamera.
         mapView.camera = newCamera
         let newVisibleCoordinates = mapView.visibleCoordinateBounds
-        
+
         // Revert the camera.
         mapView.camera = currentCamera
-        
+
         // Test if the newCameraCenter and newVisibleCoordinates are inside bbox.
         let inside = MGLCoordinateInCoordinateBounds(newCameraCenter, bbox)
         let intersects = MGLCoordinateInCoordinateBounds(newVisibleCoordinates.ne, bbox) && MGLCoordinateInCoordinateBounds(newVisibleCoordinates.sw, bbox)
-        
+
         return inside && intersects
     }
-    
+
     func mapView(_ mapView: MGLMapView, imageFor annotation: MGLAnnotation) -> MGLAnnotationImage? {
         // Only for Symbols images should loaded.
-        guard let symbol = annotation as? Symbol,
-            let iconImageFullPath = symbol.iconImage else {
-                return nil
-        }
+        //guard let symbol = annotation as? Symbol,
+        //    let iconImageFullPath = symbol.iconImage else {
+        //        return nil
+        //}
         // Reuse existing annotations for better performance.
+        var iconImageFullPath = "assets/points/var.png"
         var annotationImage = mapView.dequeueReusableAnnotationImage(withIdentifier: iconImageFullPath)
         if annotationImage == nil {
             // Initialize the annotation image (from predefined assets symbol folder).
@@ -418,7 +463,8 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
                 let directory = String(iconImageFullPath[..<range.lowerBound])
                 let assetPath = registrar.lookupKey(forAsset: "\(directory)/")
                 let iconImageName = String(iconImageFullPath[range.upperBound...])
-                let image = UIImage.loadFromFile(imagePath: assetPath, imageName: iconImageName)
+                var image = UIImage.loadFromFile(imagePath: assetPath, imageName: iconImageName)
+                image = image!.resizeImage(targetSize: CGSize(width: 40, height: 40))
                 if let image = image {
                     annotationImage = MGLAnnotationImage(image: image, reuseIdentifier: iconImageFullPath)
                 }
