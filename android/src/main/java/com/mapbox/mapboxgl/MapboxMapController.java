@@ -124,6 +124,7 @@ final class MapboxMapController
   private LocationComponent locationComponent = null;
   private LocationEngine locationEngine = null;
   private LocalizationPlugin localizationPlugin;
+  private Style style;
 
   MapboxMapController(
     int id,
@@ -319,6 +320,7 @@ final class MapboxMapController
   Style.OnStyleLoaded onStyleLoadedCallback = new Style.OnStyleLoaded() {
     @Override
     public void onStyleLoaded(@NonNull Style style) {
+      MapboxMapController.this.style = style;
       enableLineManager(style);
       enableSymbolManager(style);
       enableCircleManager(style);
@@ -551,9 +553,42 @@ final class MapboxMapController
         result.success(symbolId);
         break;
       }
+      case "symbol#add_many": {
+        List<String> newSymbolIds = null;
+        final List<Object> options = call.argument("options");
+        if (options != null) {
+          final BatchSymbolsCreateCommand batchSymbolsCreateCommand = new BatchSymbolsCreateCommand();
+          SymbolOptionsProvider symbolOptionsProvider;
+          for (Object o : options) {
+            symbolOptionsProvider = new SymbolOptionsProvider();
+            Convert.interpretSymbolOptions(o, symbolOptionsProvider);
+            symbolOptionsProvider.commitToBatchCreateCommand(batchSymbolsCreateCommand);
+          }
+          Map<String, SymbolController> newSymbolControllers = batchSymbolsCreateCommand.create(symbolManager, this);
+          symbols.putAll(newSymbolControllers);
+          newSymbolIds = new ArrayList<>(newSymbolControllers.keySet());
+        }
+        result.success(newSymbolIds);
+        break;
+      }
       case "symbol#remove": {
         final String symbolId = call.argument("symbol");
         removeSymbol(symbolId);
+        result.success(null);
+        break;
+      }
+      case "symbol#remove_many": {
+        final ArrayList<String> symbolIds = call.argument("symbols");
+        final BatchSymbolsRemoveCommand batchSymbolsRemoveCommand = new BatchSymbolsRemoveCommand();
+        SymbolController symbolController;
+
+        for(String symbolId : symbolIds){
+            symbolController = symbols.remove(symbolId);
+            if (symbolController != null) {
+              symbolController.commitToBatchRemoveCommand(batchSymbolsRemoveCommand);
+            }
+        }
+        batchSymbolsRemoveCommand.delete(symbolManager);
         result.success(null);
         break;
       }
@@ -646,6 +681,14 @@ final class MapboxMapController
             }
           });
         }
+        break;
+      }
+      case "style#addImage":{
+        if(style==null){
+          result.error("STYLE IS NULL", "The style is null. Has onStyleLoaded() already been invoked?", null);
+        }
+        style.addImage(call.argument("name"), BitmapFactory.decodeByteArray(call.argument("bytes"),0,call.argument("length")), call.argument("sdf"));
+        result.success(null);
         break;
       }
       default:

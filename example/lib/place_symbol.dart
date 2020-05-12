@@ -4,8 +4,11 @@
 
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 
 import 'page.dart';
@@ -40,10 +43,28 @@ class PlaceSymbolBodyState extends State<PlaceSymbolBody> {
     controller.onSymbolTapped.add(_onSymbolTapped);
   }
 
+  void _onStyleLoaded() {
+    addImageFromAsset("assetImage", "assets/symbols/custom-icon.png");
+    addImageFromUrl("networkImage", "https://via.placeholder.com/50");
+  }
+
   @override
   void dispose() {
     controller?.onSymbolTapped?.remove(_onSymbolTapped);
     super.dispose();
+  }
+
+  /// Adds an asset image to the currently displayed style
+  Future<void> addImageFromAsset(String name, String assetName) async {
+    final ByteData bytes = await rootBundle.load(assetName);
+    final Uint8List list = bytes.buffer.asUint8List();
+    return controller.addImage(name, list);
+  }
+
+  /// Adds a network image to the currently displayed style
+  Future<void> addImageFromUrl(String name, String url) async {
+    var response = await get(url);
+    return controller.addImage(name, response.bodyBytes);
   }
 
   void _onSymbolTapped(Symbol symbol) {
@@ -81,11 +102,45 @@ class PlaceSymbolBodyState extends State<PlaceSymbolBody> {
     });
   }
 
+  Future<void> _addMany() async {
+  	final bounds = await controller.getVisibleRegion();
+  	//Select random amount between 2 and 5
+    final int amountOfSymbolsToAdd = (Iterable<int>.generate(5).where((i) => i > 1).toList()..shuffle()).first;
+    final List<SymbolOptions> symbolOptionsList = [];
+    final int delimiter = 10;
+    final List<int> steps = Iterable<int>.generate(delimiter - 1).where((i) => i > 0).toList();
+    for(int i = 1; i <= amountOfSymbolsToAdd; i++) {
+        if (_symbolCount + i > 12) break;
+        symbolOptionsList.add(
+	        SymbolOptions(
+		        geometry: LatLng(
+			        bounds.southwest.latitude + ((steps..shuffle()).first) * (bounds.northeast.latitude - bounds.southwest.latitude) / delimiter,
+			        bounds.southwest.longitude + ((steps..shuffle()).first) * (bounds.northeast.longitude - bounds.southwest.longitude) / delimiter,
+		        ),
+		        iconImage: 'airport-15',
+            )
+        );
+    }
+    
+    if(symbolOptionsList.isNotEmpty) controller.addSymbols(symbolOptionsList);
+    setState(() {
+      _symbolCount += symbolOptionsList.length;
+    });
+  }
+
   void _remove() {
     controller.removeSymbol(_selectedSymbol);
     setState(() {
       _selectedSymbol = null;
       _symbolCount -= 1;
+    });
+  }
+
+  void _removeAll() {
+    controller.removeSymbols(controller.symbols);
+    setState(() {
+      _selectedSymbol = null;
+      _symbolCount = 0;
     });
   }
 
@@ -185,6 +240,7 @@ class PlaceSymbolBodyState extends State<PlaceSymbolBody> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -197,6 +253,7 @@ class PlaceSymbolBodyState extends State<PlaceSymbolBody> {
             height: 200.0,
             child: MapboxMap(
               onMapCreated: _onMapCreated,
+              onStyleLoadedCallback: _onStyleLoaded,
               initialCameraPosition: const CameraPosition(
                 target: LatLng(-33.852, 151.211),
                 zoom: 11.0,
@@ -219,6 +276,11 @@ class PlaceSymbolBodyState extends State<PlaceSymbolBody> {
                               (_symbolCount == 12) ? null : _add("airport-15"),
                         ),
                         FlatButton(
+                          child: const Text('add_many'),
+                          onPressed: () =>
+                          (_symbolCount == 12) ? null : _addMany(),
+                        ),
+                        FlatButton(
                           child: const Text('add (custom icon)'),
                           onPressed: () => (_symbolCount == 12)
                               ? null
@@ -227,6 +289,22 @@ class PlaceSymbolBodyState extends State<PlaceSymbolBody> {
                         FlatButton(
                           child: const Text('remove'),
                           onPressed: (_selectedSymbol == null) ? null : _remove,
+                        ),
+                        FlatButton(
+                          child: const Text('remove all'),
+                          onPressed: (_symbolCount == 0) ? null : _removeAll,
+                        ),
+                        FlatButton(
+                          child: const Text('add (asset image)'),
+                          onPressed: () => (_symbolCount == 12)
+                              ? null
+                              : _add(
+                                  "assetImage"), //assetImage added to the style in _onStyleLoaded
+                        ),
+                        FlatButton(
+                          child: const Text('add (network image)'),
+                          onPressed: () =>
+                              (_symbolCount == 12) ? null : _add("networkImage"), //networkImage added to the style in _onStyleLoaded
                         ),
                       ],
                     ),
@@ -239,8 +317,9 @@ class PlaceSymbolBodyState extends State<PlaceSymbolBody> {
                         ),
                         FlatButton(
                           child: const Text('change icon offset'),
-                          onPressed:
-                              (_selectedSymbol == null) ? null : _changeIconOffset,
+                          onPressed: (_selectedSymbol == null)
+                              ? null
+                              : _changeIconOffset,
                         ),
                         FlatButton(
                           child: const Text('change icon anchor'),
