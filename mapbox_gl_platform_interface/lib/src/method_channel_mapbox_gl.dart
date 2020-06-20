@@ -2,6 +2,9 @@ part of mapbox_gl_platform_interface;
 
 class MethodChannelMapboxGl extends MapboxGlPlatform {
   MethodChannel _channel;
+  bool _styleWasLoaded = false;
+  
+  bool get styleWasLoaded => _styleWasLoaded;
 
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
@@ -42,6 +45,7 @@ class MethodChannelMapboxGl extends MapboxGlPlatform {
         break;
       case 'map#onStyleLoaded':
         onMapStyleLoadedPlatform(null);
+        _styleWasLoaded = true;
         break;
       case 'map#onMapClick':
         final double x = call.arguments['x'];
