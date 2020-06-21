@@ -103,8 +103,8 @@ class MapboxMapController extends ChangeNotifier {
       (MapboxGlPlatform.getInstance(_id) as MethodChannelMapboxGl).styleWasLoaded
     ) {
         MapboxGlPlatform.getInstance(_id).onMapStyleLoadedPlatform(null);
-      }
     }
+    
 
     MapboxGlPlatform.getInstance(_id).onMapClickPlatform.add((dict) {
       if (onMapClick != null) {
