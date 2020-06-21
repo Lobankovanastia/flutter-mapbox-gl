@@ -98,8 +98,10 @@ class MapboxMapController extends ChangeNotifier {
         onStyleLoadedCallback();
       }
     });
-    if (MapboxGlPlatform.getInstance(_id) is MethodChannelMapboxGl) {
-      if ((MapboxGlPlatform.getInstance(_id) as MethodChannelMapboxGl).styleWasLoaded) {
+    if (
+      MapboxGlPlatform.getInstance(_id) is MethodChannelMapboxGl &&
+      (MapboxGlPlatform.getInstance(_id) as MethodChannelMapboxGl).styleWasLoaded
+    ) {
         MapboxGlPlatform.getInstance(_id).onMapStyleLoadedPlatform(null);
       }
     }
