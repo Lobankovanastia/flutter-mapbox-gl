@@ -19,7 +19,7 @@ dependencies:
   mapbox_gl_platform_interface:
     git:
       url: https://github.com/Lobankovanastia/flutter-mapbox-gl.git
-      refs: downgrade_sdk
+      ref: downgrade_sdk
       path: mapbox_gl_platform_interface
   mapbox_gl_dart: ^0.1.5
   image: ^2.1.12
