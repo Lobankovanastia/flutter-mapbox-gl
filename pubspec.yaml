@@ -10,11 +10,12 @@ dependencies:
     git:
       url: https://github.com/Lobankovanastia/flutter-mapbox-gl.git
       path: mapbox_gl_platform_interface/
+      ref: downgrade_sdk
   mapbox_gl_web:
     git:
       url: https://github.com/Lobankovanastia/flutter-mapbox-gl.git
       path: mapbox_gl_web/
-
+      ref: downgrade_sdk
 flutter:
   plugin:
     platforms:
