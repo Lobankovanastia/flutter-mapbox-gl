@@ -64,7 +64,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
             }
         }
         
-        mapView.attributionButton.isHidden = true
+        //mapView.attributionButton.
     }
     
     func onMethodCall(methodCall: FlutterMethodCall, result: @escaping FlutterResult) {
